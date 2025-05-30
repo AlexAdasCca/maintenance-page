@@ -9,9 +9,10 @@ export default defineConfig(({ mode }) => {
     plugins: [vue()],
     base: './',
     define: {
-      'import.meta.env.TEXTDB_ID': JSON.stringify(env.TEXTDB_ID),
-      'import.meta.env.MAINTENANCE_ID': JSON.stringify(env.MAINTENANCE_ID)
+      'import.meta.env.TEXTDB_ID': JSON.stringify(env.TEXTDB_ID || ''),
+      'import.meta.env.MAINTENANCE_ID': JSON.stringify(env.MAINTENANCE_ID || '')
     },
+    envPrefix: ['VITE_', 'TEXTDB_', 'MAINTENANCE_'],
     build: {
       outDir: 'dist',
       assetsDir: 'assets',

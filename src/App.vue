@@ -13,14 +13,29 @@ const error = ref('')
 // 从TextDB获取维护数据
 const fetchMaintenanceData = async () => {
   try {
-    if (!import.meta.env.MAINTENANCE_ID) {
-      throw new Error('获取维护信息失败，当前可能未设置维护信息')
+    if (!import.meta.env.TEXTDB_ID || !import.meta.env.MAINTENANCE_ID) {
+      throw new Error('获取维护信息失败，请检查环境变量配置')
     }
 
-    const response = await fetch(`https://textdb.online/${import.meta.env.TEXTDB_ID}`)
+    const textdbUrl = `https://textdb.online/${import.meta.env.TEXTDB_ID}`
+    console.log('Fetching maintenance data from:', textdbUrl)
+    const response = await fetch(textdbUrl)
     if (!response.ok) throw new Error('获取维护信息失败，当前可能未设置维护信息')
     
-    const allData = await response.json()
+    const text = await response.text()
+    if (!text) throw new Error('获取到空响应')
+    
+    let allData
+    try {
+      allData = JSON.parse(text)
+    } catch (e) {
+      throw new Error('维护信息格式无效')
+    }
+    
+    if (typeof allData !== 'object' || allData === null) {
+      throw new Error('维护信息格式无效')
+    }
+    
     const maintenanceData = allData[import.meta.env.MAINTENANCE_ID]
     
     if (!maintenanceData) {
