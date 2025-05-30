@@ -19,11 +19,9 @@ const fetchMaintenanceData = async () => {
 
     const textdbUrl = `https://textdb.online/${import.meta.env.TEXTDB_ID}`
     console.log('Fetching maintenance data from:', textdbUrl)
-    const response = await fetch(textdbUrl, {
+    const response = await fetch(`${textdbUrl}?t=${Date.now()}`, {
       headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+        'Cache-Control': 'no-cache'
       }
     })
     if (!response.ok) throw new Error('获取维护信息失败，当前可能未设置维护信息')
