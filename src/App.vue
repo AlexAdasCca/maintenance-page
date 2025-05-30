@@ -30,17 +30,22 @@ const fetchMaintenanceData = async () => {
     status.value = maintenanceData.status
     startTime.value = new Date(maintenanceData.startTime)
     endTime.value = new Date(maintenanceData.endTime)
-  } catch (err) {
-    error.value = err.message
-    console.error(err)
-    // 显示短暂提示
-    const notification = document.createElement('div')
-    notification.className = 'notification'
-    notification.textContent = error.value
-    document.body.appendChild(notification)
-    setTimeout(() => {
-      notification.remove()
-    }, 3000)
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      error.value = err.message
+      console.error(err)
+      // 显示短暂提示
+      const notification = document.createElement('div')
+      notification.className = 'notification'
+      notification.textContent = error.value
+      document.body.appendChild(notification)
+      setTimeout(() => {
+        notification.remove()
+      }, 3000)
+    } else {
+      error.value = '发生未知错误'
+      console.error('Unexpected error', err)
+    }
   } finally {
     isLoading.value = false
   }
