@@ -3,10 +3,48 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 // 维护状态和配置
 const status = ref<'即将' | '进行中' | '已完成'>('进行中')
-const startTime = ref(new Date('2025-05-30T10:00:00'))
-const endTime = ref(new Date('2025-05-30T18:00:00'))
+const startTime = ref(new Date())
+const endTime = ref(new Date())
 const currentTime = ref(new Date())
 const remainingTime = ref('')
+const isLoading = ref(true)
+const error = ref('')
+
+// 从TextDB获取维护数据
+const fetchMaintenanceData = async () => {
+  try {
+    if (!import.meta.env.MAINTENANCE_ID) {
+      throw new Error('获取维护信息失败，当前可能未设置维护信息')
+    }
+
+    const response = await fetch(`https://textdb.online/${import.meta.env.TEXTDB_ID}`)
+    if (!response.ok) throw new Error('获取维护信息失败，当前可能未设置维护信息')
+    
+    const allData = await response.json()
+    const maintenanceData = allData[import.meta.env.MAINTENANCE_ID]
+    
+    if (!maintenanceData) {
+      throw new Error('获取维护信息失败，当前可能未设置维护信息')
+    }
+
+    status.value = maintenanceData.status
+    startTime.value = new Date(maintenanceData.startTime)
+    endTime.value = new Date(maintenanceData.endTime)
+  } catch (err) {
+    error.value = err.message
+    console.error(err)
+    // 显示短暂提示
+    const notification = document.createElement('div')
+    notification.className = 'notification'
+    notification.textContent = error.value
+    document.body.appendChild(notification)
+    setTimeout(() => {
+      notification.remove()
+    }, 3000)
+  } finally {
+    isLoading.value = false
+  }
+}
 
 // 更新当前时间和剩余时间
 const updateTime = () => {
@@ -38,8 +76,10 @@ const formatTime = (ms: number) => {
 // 设置定时器
 let timer: number
 onMounted(() => {
-  updateTime()
-  timer = setInterval(updateTime, 1000)
+  fetchMaintenanceData().then(() => {
+    updateTime()
+    timer = setInterval(updateTime, 1000)
+  })
 })
 
 onUnmounted(() => {
@@ -50,32 +90,47 @@ onUnmounted(() => {
 <template>
   <div class="maintenance-container">
     <h1>网站维护通知</h1>
-    <div class="status-card">
-      <div class="status-badge" :class="status">
-        {{ status }}维护
-      </div>
-      
-      <div class="time-info">
-        <div class="time-row">
-          <span>开始时间:</span>
-          <span>{{ startTime.toLocaleString() }}</span>
-        </div>
-        <div class="time-row">
-          <span>结束时间:</span>
-          <span>{{ endTime.toLocaleString() }}</span>
-        </div>
-        <div class="time-row">
-          <span>当前时间:</span>
-          <span>{{ currentTime.toLocaleString() }}</span>
-        </div>
-        <div class="time-row">
-          <span>剩余时间:</span>
-          <span>{{ remainingTime }}</span>
-        </div>
-      </div>
+    
+    <div v-if="isLoading" class="loading">
+      正在加载维护信息...
     </div>
     
-    <p class="notice">给您带来的不便，我们深表歉意。维护完成后，我们将立即恢复服务。</p>
+    <template v-if="error">
+      <div class="default-maintenance">
+        <h2>网站维护中</h2>
+        <p>我们正在对网站进行维护升级，请稍后再访问。</p>
+        <p>给您带来的不便，我们深表歉意。</p>
+      </div>
+    </template>
+    
+    <template v-else>
+      <div class="status-card">
+        <div class="status-badge" :class="status">
+          {{ status }}维护
+        </div>
+        
+        <div class="time-info">
+          <div class="time-row">
+            <span>开始时间:</span>
+            <span>{{ startTime.toLocaleString() }}</span>
+          </div>
+          <div class="time-row">
+            <span>结束时间:</span>
+            <span>{{ endTime.toLocaleString() }}</span>
+          </div>
+          <div class="time-row">
+            <span>当前时间:</span>
+            <span>{{ currentTime.toLocaleString() }}</span>
+          </div>
+          <div class="time-row">
+            <span>剩余时间:</span>
+            <span>{{ remainingTime }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <p class="notice">给您带来的不便，我们深表歉意。维护完成后，我们将立即恢复服务。</p>
+    </template>
   </div>
 </template>
 
@@ -150,9 +205,53 @@ h1 {
   color: #555;
 }
 
+.loading {
+  color: #3498db;
+  font-size: 1.2rem;
+  margin: 2rem 0;
+}
+
+.error {
+  color: #e74c3c;
+  font-size: 1.2rem;
+  margin: 2rem 0;
+  padding: 1rem;
+  background-color: #fdecea;
+  border-radius: 8px;
+}
+
 .notice {
   color: #7f8c8d;
   font-style: italic;
+}
+
+.default-maintenance {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e74c3c;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
 
 @media (max-width: 600px) {
